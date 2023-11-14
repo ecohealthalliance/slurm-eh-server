@@ -1,0 +1,21 @@
+- hosts: base_machines
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Add Docker key
+      shell: "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -"
+    - name: Add Docker repository
+      shell: |
+        add-apt-repository \
+        "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) \
+        stable"
+    - name: Install (or update) docker package
+      apt:
+        name: "docker-ce"
+        update_cache: yes
+    - name: Install docker-compose
+      pip:
+        name:
+          - setuptools
+          - docker-compose==1.29.2

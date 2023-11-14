@@ -1,0 +1,65 @@
+- hosts: prospero
+  become: yes
+  become_method: sudo
+  tasks:
+    - apt: pkg=nfs-kernel-server
+    # - lineinfile:
+    #   path: /etc/exports
+    #   line: "/home       aegypti.local(rw,sync,no_root_squash,no_subtree_check)"
+    - service:
+        name: nfs-kernel-server
+        state: restarted
+  vars_files:
+    - secure.yml
+
+# - hosts: aegypti
+#   become: yes
+# become_method: sudo
+# tasks:
+# - apt: pkg=nfs-common
+# - find:
+#   paths: /home
+# patterns: "*.*"
+# register: foundFiles
+# - assert:
+#   that: "foundFiles.matched == 0"
+# msg: "/home must be empty"
+# - mount:
+#   backup: yes
+# path: /home
+# src: prospero.local:/home
+# fstype: nfs
+# opts: auto,nofail,noatime,nolock,intr,tcp,actimeo=1800
+# state: mounted
+#   vars_files:
+#   - secure.yml
+
+- hosts: base_machines
+  become: yes
+  become_method: sudo
+  tasks:
+    - apt: pkg=nfs-common
+    - name: Create archive directory
+      file:
+        state: directory
+        path: "/archive"
+    - mount:
+        backup: yes
+        path: /archive/users
+        src: 10.0.0.16:/volume1/nfs
+        fstype: nfs
+        opts: auto,nofail,noatime,nolock,intr,tcp,actimeo=1800
+        state: mounted
+    # - mount:
+    #  backup: yes
+    # path: "/archive/{{item}}"
+    #  src: "10.0.0.16:/{{item}}"
+    #  fstype: nfs
+    #  opts: ro,auto,nofail,noatime,nolock,intr,tcp,actimeo=1800
+    #   state: mounted
+    # with_items:
+    # - "Birds"
+    # - "GIS"
+    # - "gisdata"
+  vars_files:
+    - secure.yml

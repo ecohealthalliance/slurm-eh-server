@@ -1,0 +1,9 @@
+---
+ansible_host: aegypti.ecohealthalliance.org
+ansible_port: 22020
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+ansible_python_interpreter: /usr/bin/python3
+reservoir_hostname: aegypti-reservoir
+reservoir_image: "ghcr.io/ecohealthalliance/reservoir:base"
+controller_image: "ghcr.io/ecohealthalliance/slurm_reservoir:controller-gpu"
+worker_image: "ghcr.io/ecohealthalliance/slurm_reservoir:worker-gpu"

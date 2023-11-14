@@ -1,0 +1,7 @@
+- hosts: base_machines
+  become: yes
+  become_method: sudo
+  roles:
+    - update-accounts
+  vars_files:
+    - secure.yml

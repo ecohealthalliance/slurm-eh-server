@@ -1,0 +1,6 @@
+*.key filter=git-crypt diff=git-crypt
+*.pem filter=git-crypt diff=git-crypt
+secure.yml filter=git-crypt diff=git-crypt
+.env filter=git-crypt diff=git-crypt
+repeldb/.env filter=git-crypt diff=git-crypt
+group_vars/base_machines/base_machines.yml filter=git-crypt diff=git-crypt

@@ -1,0 +1,72 @@
+- hosts: prospero
+  become: yes
+  become_user: root
+  vars:
+    backup_keys:
+      - backup.key
+      - backup.secret.key
+    aws_keys_file: host_vars/prospero/aws_keys.yml
+  tasks:
+    - name: Debug AWS keys
+      debug:
+        var: aws_keys
+
+    - name: Create backup script
+      template:
+        src: files/backup.sh.j2
+        dest: /root/backup.sh
+        owner: root
+        mode: u=rwx,g=,o=
+
+    - name: Copy keys
+      copy:
+        src: "{{ item }}"
+        dest: "/root"
+      with_items: "{{ backup_keys }}"
+
+    - name: Install backup keys
+      shell: "gpg --import /root/{{ item }}"
+      with_items: "{{ backup_keys }}"
+
+    - file:
+        path: "/root/{{ item }}"
+        state: absent
+      with_items: "{{ backup_keys }}"
+
+    - name: Install Backblaze B2 package
+      command: "pip install b2==3.9.0"
+
+    - name: Copy script to cycle backups
+      copy:
+        src: files/cycle_backup_log.sh
+        dest: /root/cycle_backup_log.sh
+        owner: root
+        group: root
+        mode: "0700"
+
+    - cron:
+        name: "{{ item.name }}"
+        month: "*"
+        day: "*"
+        weekday: "*"
+        minute: "{{ item.minute }}"
+        hour: "{{ item.hour }}"
+        job: "{{ item.job }}"
+        state: present
+      loop:
+        - {
+            job: "bash /root/backup.sh >> /root/cron.log 2>&1",
+            name: "Create home directory backups",
+            hour: "2",
+            minute: "1",
+          }
+        - {
+            job: "bash /root/cycle_backup_log.sh",
+            name: "Cycle backups nightly",
+            hour: "1",
+            minute: "0",
+          }
+
+  vars_files:
+    - secure.yml
+    - "{{ aws_keys_file }}"

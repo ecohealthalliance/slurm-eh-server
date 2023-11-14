@@ -1,0 +1,15 @@
+# Homebrew users 
+
+Current set up allows specific users to run linuxbrew on their home directory. 
+
+# Install and updates of packages 
+Due to the shared nature of linuxbrew setup install of new packages will be done upon request and using a single user linuxbrew user. 
+This is to prevent permission on ownership of packages via brew 
+
+# List packages 
+ To list installed packeges 
+
+ `brew list `
+
+ # Requesting packages 
+ To request packages create/raise an issue with the packege name and version

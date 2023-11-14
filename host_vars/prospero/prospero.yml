@@ -1,0 +1,7 @@
+---
+ansible_host: prospero.ecohealthalliance.org
+ansible_port: 22020
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+machine_runtime: nvidia
+reservoir_image: "ghcr.io/ecohealthalliance/reservoir:gpu"
+reservoir_hostname: prospero-reservoir

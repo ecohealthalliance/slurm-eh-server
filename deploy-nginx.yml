@@ -1,0 +1,32 @@
+# Deploy nginx proxy for https access to /rstudio and authenticated access to shiny apps.
+- hosts: base_machines
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Copy nginx directory
+      copy: src="files/nginx/" dest="/nginx"
+    - git:
+        repo: "https://github.com/ecohealthalliance/shiny-auth0.git"
+        dest: /rshinyauth0
+        force: yes
+    - name: Create rshinyauth0 env
+      copy:
+        dest: "/rshinyauth0/.env"
+        content: |
+          AUTH0_CLIENT_SECRET={{auth0_client_secret}}
+          AUTH0_CLIENT_ID="7qLOuPJqX36GzKW2MP8jSuIVEcsKt4NH"
+          AUTH0_DOMAIN=aegypti.auth0.com
+          AUTH0_CALLBACK_URL=https://{{inventory_hostname}}.ecohealthalliance.org/callback
+          COOKIE_SECRET={{auth0_cookie_secret}}
+          SHINY_HOST=rstudio
+          SHINY_PORT=3838
+          PORT=3000
+          LOGOUT_URL=https://{{inventory_hostname}}.ecohealthalliance.org/
+    - name: Start services
+      docker_service:
+        project_src: "/nginx"
+        pull: true
+      environment:
+        HOSTNAME: "{{inventory_hostname}}"
+  vars_files:
+    - secure.yml

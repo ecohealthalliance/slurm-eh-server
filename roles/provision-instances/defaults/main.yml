@@ -1,0 +1,5 @@
+default_instance_tags:
+  Name: "{{ instance_tag }}"
+  "user:Owner": "reservoir-deploy-script"
+
+instance_tags: {}

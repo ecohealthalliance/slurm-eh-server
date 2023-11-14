@@ -1,0 +1,118 @@
+#!/bin/bash
+
+PASSPHRASE=""
+GPG_KEY="{{ gpg_key }}"
+BK_FULL_FREQ="1M"
+BK_FULL_LIFE="2M"
+BK_KEEP_FULL="1"
+AWS_ACCESS_KEY_ID="{{ aws_keys.access_key }}"
+AWS_SECRET_ACCESS_KEY="{{ aws_keys.secret_key }}"
+VOL_SIZE="1000"  # default volume size set to 1000MB
+
+LOG_GROUP_NAME="BackupFailureLogGroup"
+
+# Check if AWS keys are set
+if [[ -z "${AWS_ACCESS_KEY_ID}" || -z "${AWS_SECRET_ACCESS_KEY}" ]]; then
+  echo "AWS keys are not set. Please configure the 'aws_keys' variable."
+  exit 1
+fi
+
+# Check for ongoing backup
+if [ $(find /root/.backup_in_progress -mtime -7 -type f) ]; then
+   echo -e "Prior backup is still in progress. Exiting..."
+   exit 1
+fi
+touch /root/.backup_in_progress
+
+IFS=$'\n'
+
+for i in $(find /home/ -maxdepth 1 -type d -regextype sed -regex '.*/[a-zA-Z0-9\_]\+$' ! -name 'git'); do
+  dest="s3://s3.amazonaws.com/prospero-bckp/backupof$(basename $i)"
+
+   # Log size of the directory before backup
+    DIR_SIZE=$(du -sh "$i" | cut -f1)
+    echo "Size of $i: $DIR_SIZE"
+
+  # Check if a full backup is needed
+  if duplicity verify $dest | grep -q "Last full backup date"; then
+    LAST_FULL_BACKUP=$(duplicity verify $dest | grep "Last full backup date" | cut -d':' -f2-)
+    FB_YEAR_MONTH_DAY_PLUS_60_DAYS=$(date -d "$LAST_FULL_BACKUP + 60 days" +%Y-%m-%d)
+    CURRENT_YEAR_MONTH_DAY=$(date +%Y-%m-%d)
+
+    if [[ "$CURRENT_YEAR_MONTH_DAY" > "$FB_YEAR_MONTH_DAY_PLUS_60_DAYS" ]]; then
+      echo "Last full backup is too old, forcing a new full backup..."
+      duplicity full --volsize $VOL_SIZE --encrypt-key=$GPG_KEY --sign-key=$GPG_KEY --exclude-regexp="\/(\.rstudio|\.Rproj\.user|home\/$(basename $i)\/te?mp)$" "$i" "$dest"
+    else
+      echo "Performing an incremental backup..."
+      duplicity --volsize $VOL_SIZE --encrypt-key=$GPG_KEY --sign-key=$GPG_KEY --exclude-regexp="\/(\.rstudio|\.Rproj\.user|home\/$(basename $i)\/te?mp)$" "$i" "$dest"
+
+    fi
+  else
+    echo "No previous backups found, performing a full backup..."
+    PASSPHRASE=$PASSPHRASE duplicity --volsize $VOL_SIZE --encrypt-key=$GPG_KEY --sign-key=$GPG_KEY --exclude-regexp="\/(\.rstudio|\.Rproj\.user|home\/$(basename $i)\/te?mp)$" --full-if-older-than $BK_FULL_FREQ "$i" "$dest"
+  fi
+
+  start_time=$(date +%s)
+  BACKUP_OUTPUT=$(PASSPHRASE=$PASSPHRASE duplicity --encrypt-key=$GPG_KEY --sign-key=$GPG_KEY --exclude-regexp="\/(\.rstudio|\.Rproj\.user|home\/$(basename $i)\/te?mp)$" --full-if-older-than $BK_FULL_FREQ "$i" "$dest")
+  BACKUP_EXIT="$?"
+  end_time=$(date +%s)
+  duration=$((end_time - start_time))
+
+  # Log the backup status and duration to CloudWatch
+  LOG_STREAM_NAME="$(basename $i)"
+
+  if [[ "$BACKUP_EXIT" != "0" ]]; then
+    echo "Backup failed: $(basename $i)"
+
+    # Check if the log stream exists
+    EXISTING_LOG_STREAM=$(aws logs describe-log-streams --log-group-name $LOG_GROUP_NAME --log-stream-name-prefix $LOG_STREAM_NAME --query "logStreams[?logStreamName=='$LOG_STREAM_NAME'].logStreamName" --output text)
+
+    # If the log stream doesn't exist, create it
+    if [ -z "$EXISTING_LOG_STREAM" ]; then
+        aws logs create-log-stream --log-group-name $LOG_GROUP_NAME --log-stream-name $LOG_STREAM_NAME --region "us-east-1"
+    fi
+
+    # Add a log event for the backup failure
+    aws logs put-log-events --log-group-name $LOG_GROUP_NAME --log-stream-name $LOG_STREAM_NAME --log-events "[{\"timestamp\": $(date +%s)000, \"message\": \"Backup failed: $(basename $i)\"}]" --region "us-east-1"
+  else
+    echo "Backup succeeded: $(basename $i)"
+  fi
+
+  duplicity remove-older-than $BK_FULL_LIFE --force --volsize $VOL_SIZE "$dest"
+  duplicity remove-all-inc-of-but-n-full $BK_KEEP_FULL --force --volsize $VOL_SIZE "$dest"
+
+  ERROR_LINE_EXISTS=0
+  FB_LINE_EXISTS=0
+
+  while IFS= read -r line; do
+    if [[ "$line" == "Errors"* ]]; then
+      ERROR_LINE_EXISTS=1
+      LINE_ERRORS=$(echo $line | cut -d' ' -f2)
+      if [[ "${LINE_ERRORS}" != "0" ]]; then
+        echo "CloudWatchError: $i $LINE_ERRORS"
+      fi
+    fi
+    if [[ "$line" == "Last full backup date:"* ]]; then
+      FB_LINE_EXISTS=1
+      IFS=':' read -r garbage FULL_BACKUP_DATE <<< "$line"
+      if [[ -n "$FULL_BACKUP_DATE" ]]; then
+        FB_YEAR_MONTH_DAY_PLUS_60_DAYS=$(date -d "$FULL_BACKUP_DATE+60 days" +%F)
+        CURRENT_YEAR_MONTH_DAY=$(date +%F)
+        if [[ "$CURRENT_YEAR_MONTH_DAY" > "$FB_YEAR_MONTH_DAY_PLUS_60_DAYS" ]]; then
+          aws cloudwatch put-metric-data --namespace "Backup" --metric-name "BackupInfo" --value 1 --dimensions "BackupType=Info,BackupTarget=$(basename $i)"
+        fi
+      fi
+    fi
+  done <<< "$BACKUP_OUTPUT"
+
+  echo "$BACKUP_OUTPUT"
+  if [[ "$ERROR_LINE_EXISTS" == "0" ]]; then
+    echo "CloudWatchError: $i Error line doesn't exist!"
+  fi
+  if [[ "$FB_LINE_EXISTS" == "0" ]]; then
+    echo "CloudWatchError: $i Full Backup is missing!"
+  fi
+done
+
+unset IFS
+rm /root/.backup_in_progress

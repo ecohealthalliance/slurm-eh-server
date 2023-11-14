@@ -1,0 +1,92 @@
+---
+- name: Update groups
+  group:
+    name: "{{item.name}}"
+    gid: "{{item.gid}}"
+    state: "{{item.state | default('present')}}"
+  with_items: "{{group_accounts}}"
+
+- name: Update Accounts
+  user:
+    name: "{{item.name}}"
+    comment: "{{item.full_name}}"
+    uid: "{{item.uid}}"
+    groups: "{{item.groups | default('')}}"
+    state: "{{item.state | default('present')}}"
+    password: "{{item.password_hash}}"
+    update_password: always
+    generate_ssh_key: yes
+    shell: "{{item.shell | default('/bin/bash')}}"
+    create_home: "{{create_user_homes | default(true)}}"
+  with_items: "{{user_accounts}}"
+  when: (is_docker_container is defined and is_docker_container) or (item.admin is defined and item.admin == true)
+
+- when: is_docker_container is defined and is_docker_container and not(is_remote_host is defined and is_remote_host)
+  block:
+    - name: Create local directories for users
+      file:
+        owner: "{{item.name}}"
+        state: directory
+        path: "/local/{{item.name}}"
+      with_items: "{{user_accounts}}"
+      when: item.state is undefined or item.state != "absent"
+
+    - name: Link local directories
+      file:
+        src: "/local/{{item.name}}"
+        dest: "/home/{{item.name}}/local"
+        state: link
+      with_items: "{{user_accounts}}"
+      when: item.state is undefined or item.state != "absent"
+
+    - name: Set up shared directory
+      file:
+        path: "/home/shared"
+        state: directory
+        recurse: yes
+        owner: "root"
+        group: "fileshare"
+        mode: "2775"
+      when: (is_docker_container is defined and is_docker_container)
+
+    - name: Link shared directory
+      file:
+        src: "/home/shared"
+        dest: "/home/{{item.name}}/shared"
+        state: link
+      with_items: "{{user_accounts}}"
+      when: item.state is undefined or item.state != "absent"
+
+    # The NAS doesn't allow folder owners to be altered, so this command
+    # logs in as the intended owner in order to ensure it initially has
+    # the correct owner.
+    - name: Create NAS directories for users
+      command: 'su {{item.name}} -c "mkdir -p /archive/users/{{item.name}}"'
+      args:
+        creates: "/archive/users/{{item.name}}"
+      with_items: "{{user_accounts}}"
+      when: item.state is undefined or item.state != "absent"
+
+    - name: Link NAS directories
+      file:
+        src: "/archive/users/{{item.name}}"
+        dest: "/home/{{item.name}}/archive"
+        state: link
+      with_items: "{{user_accounts}}"
+      when: item.state is undefined or item.state != "absent"
+
+    - name: Give users cron permissions
+      lineinfile:
+        create: true
+        path: /etc/cron.d/cron.allow
+        line: "{{item.name}}"
+      with_items: "{{user_accounts}}"
+      when: item.cron is defined and item.cron and (item.state is undefined or item.state != "absent")
+
+   # - name: set group fileshare for linuxbrew home dir and allow group write
+    #  file:
+     #   path: /home/linuxbrew
+      #  state: directory
+       # recurse: yes
+       # group: fileshare
+        #mode: g+w

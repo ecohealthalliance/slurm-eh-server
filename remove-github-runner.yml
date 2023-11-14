@@ -1,0 +1,15 @@
+- hosts: base_machines
+  vars:
+    # runner_name is set per host in inventory.ini
+    runner_dir: /home/githubrunner/local/github_runner
+  become: true
+  become_user: githubrunner
+  tasks:
+    - name: get remove token
+      shell: "curl -X POST -H \"Accept: application/vnd.github.v3+json\" -u RobJY:{{ github_runner_org_pat }} https://api.github.com/orgs/ecohealthalliance/actions/runners/remove-token"
+      register: remove_token
+    - name: remove runner
+      command: "{{ runner_dir }}/config.sh remove --unattended --url https://github.com/ecohealthalliance --token {{ remove_token.stdout|from_json|json_query('token') }} --name {{ runner_name }} --pat {{ github_runner_org_pat }}"
+
+  vars_files:
+    - secure.yml

@@ -1,0 +1,83 @@
+#!/bin/bash
+
+PASSPHRASE=""
+GPG_KEY="{{ gpg_key }}"
+
+export AWS_ACCESS_KEY_ID="{{ your_access_key_id }}"
+export AWS_SECRET_ACCESS_KEY="{{ your_secret_access_key }}"
+
+# Specify the directory to restore (e.g., "/username") or leave empty to restore all directories
+RESTORE_DIRECTORY="{{ restore_directory }}"
+
+IFS=$'\n'
+
+if [[ -n "$RESTORE_DIRECTORY" ]]; then
+    # Restore a specific directory
+    dest="s3://s3.amazonaws.com/prospero-bckp/backupof$RESTORE_DIRECTORY"
+    localdir="/home/restore$RESTORE_DIRECTORY"
+    
+    # Create the target directory if it doesn't exist
+    mkdir -p "$localdir"
+    
+    # Start the timer
+    start_time=$(date +%s)
+    
+    RESTORE_OUTPUT=$(PASSPHRASE=$PASSPHRASE duplicity --encrypt-key=$GPG_KEY --sign-key=$GPG_KEY restore "$dest" "$localdir")
+    RESTORE_EXIT="$?"
+    
+    # End the timer and calculate the duration
+    end_time=$(date +%s)
+    duration=$((end_time - start_time))
+    
+    # Log the restore status and duration to CloudWatch
+    if [[ "$RESTORE_EXIT" == "0" ]]; then
+        aws cloudwatch put-metric-data --namespace "Backup" --metric-name "RestoreStatus" --value 1 --dimensions "RestoreType=Success,RestoreTarget=$RESTORE_DIRECTORY"
+        aws cloudwatch put-metric-data --namespace "Backup" --metric-name "RestoreDuration" --unit "Seconds" --value $duration --dimensions "RestoreType=Success,RestoreTarget=$RESTORE_DIRECTORY"
+    else
+        aws cloudwatch put-metric-data --namespace "Backup" --metric-name "RestoreStatus" --value 0 --dimensions "RestoreType=Failed,RestoreTarget=$RESTORE_DIRECTORY"
+        aws cloudwatch put-metric-data --namespace "Backup" --metric-name "RestoreDuration" --unit "Seconds" --value $duration --dimensions "RestoreType=Failed,RestoreTarget=$RESTORE_DIRECTORY"
+    fi
+    
+    if [[ "$RESTORE_EXIT" != "0" ]]; then
+        echo "CloudWatchError: $RESTORE_DIRECTORY Non-zero exit code on restore: $RESTORE_EXIT!"
+    fi
+    
+    echo "$RESTORE_OUTPUT"
+else
+    # Restore all directories
+    for i in $(aws s3 ls s3://prospero-bckp --recursive | awk '{print $4}'); do
+        echo "Restoring $i"
+        dest="s3://s3.amazonaws.com/prospero-bckp/$i"
+        localdir="/home/restore/$(dirname $i)"
+        
+        # Create directory if not exists
+        mkdir -p "$localdir"
+        
+        # Start the timer
+        start_time=$(date +%s)
+        
+        RESTORE_OUTPUT=$(PASSPHRASE=$PASSPHRASE duplicity --encrypt-key=$GPG_KEY --sign-key=$GPG_KEY restore "$dest" "$localdir")
+        RESTORE_EXIT="$?"
+        
+        # End the timer and calculate the duration
+        end_time=$(date +%s)
+        duration=$((end_time - start_time))
+        
+        # Log the restore status and duration to CloudWatch
+        if [[ "$RESTORE_EXIT" == "0" ]]; then
+            aws cloudwatch put-metric-data --namespace "Backup" --metric-name "RestoreStatus" --value 1 --dimensions "RestoreType=Success,RestoreTarget=$(dirname $i)"
+            aws cloudwatch put-metric-data --namespace "Backup" --metric-name "RestoreDuration" --unit "Seconds" --value $duration --dimensions "RestoreType=Success,RestoreTarget=$(dirname $i)"
+        else
+            aws cloudwatch put-metric-data --namespace "Backup" --metric-name "RestoreStatus" --value 0 --dimensions "RestoreType=Failed,RestoreTarget=$(dirname $i)"
+            aws cloudwatch put-metric-data --namespace "Backup" --metric-name "RestoreDuration" --unit "Seconds" --value $duration --dimensions "RestoreType=Failed,RestoreTarget=$(dirname $i)"
+        fi
+        
+        if [[ "$RESTORE_EXIT" != "0" ]]; then
+            echo "CloudWatchError: $i Non-zero exit code on restore: $RESTORE_EXIT!"
+        fi
+        
+        echo "$RESTORE_OUTPUT"
+    done
+fi
+
+unset IFS

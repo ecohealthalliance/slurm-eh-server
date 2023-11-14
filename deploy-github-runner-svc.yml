@@ -1,0 +1,68 @@
+- hosts: base_machines
+# playbook will exit if it finds a runner service running, but will remove non-running
+#   service or non-service runners and then install new service.
+  vars:
+    # runner_name is set per host in inventory.ini
+    runner_labels: "self-hosted,linux,x64,{{ runner_name }}"
+    runner_dir: /home/githubrunner/local/github_runner
+  become: true
+  become_user: githubrunner
+  tasks:
+    # check for existing runner service
+    - name: check for GitHub runner service
+      command: ./svc.sh status chdir=/home/githubrunner/local/github_runner
+      become: true
+      become_user: root
+      register: runner_service_check
+      ignore_errors: yes
+    # end play if service already running
+    - meta: end_play
+      when:
+        - runner_service_check.rc == 0
+        - runner_service_check.stdout.find('active (running)') != -1
+    - name: uninstall non-running service if exists
+      command: ./svc.sh uninstall chdir=/home/githubrunner/local/github_runner
+      become: true
+      become_user: root
+      when: runner_service_check.rc == 0
+    # check for existing runner and remove if it exists
+    - name: get remove token
+      shell: "curl -X POST -H \"Accept: application/vnd.github.v3+json\" -u RobJY:{{ github_runner_org_pat }} https://api.github.com/orgs/ecohealthalliance/actions/runners/remove-token"
+      register: remove_token
+      ignore_errors: yes
+    - name: remove runner
+      command: "{{ runner_dir }}/config.sh remove --unattended --url https://github.com/ecohealthalliance --token {{ remove_token.stdout|from_json|json_query('token') }} --name {{ runner_name }} --pat {{ github_runner_org_pat }}"
+      ignore_errors: yes
+    - name: remove runner directory if it exists
+      file:
+        state: absent
+        path: /home/githubrunner/local/github_runner/
+
+    # install new runner as a service
+    - name: make directory on local filesystem
+      file:
+        path: "{{ runner_dir }}"
+        state: directory
+        mode: '0755'
+    - name: download runner code archive and expand
+      unarchive:
+        src: https://github.com/actions/runner/releases/download/v2.284.0/actions-runner-linux-x64-2.284.0.tar.gz
+        dest: "{{ runner_dir }}"
+        remote_src: yes
+    - name: get registration token
+      shell: "curl -X POST -H \"Accept: application/vnd.github.v3+json\" -u RobJY:{{ github_runner_org_pat }} https://api.github.com/orgs/ecohealthalliance/actions/runners/registration-token"
+      register: registration_token
+    - name: configure runner
+      command: "{{ runner_dir }}/config.sh --unattended --url https://github.com/ecohealthalliance --token {{ registration_token.stdout|from_json|json_query('token') }} --name {{ runner_name }} --labels {{ runner_labels }} --pat {{ github_runner_org_pat }}"
+    - name: install runner as a system-d service
+      command: "./svc.sh install githubrunner chdir={{ runner_dir }}"
+      become: yes
+      become_user: root
+      become_method: sudo
+    - name: start system-d runner service
+      command: "./svc.sh start chdir={{ runner_dir }}"
+      become: yes
+      become_user: root
+      become_method: sudo
+  vars_files:
+    - secure.yml

@@ -1,0 +1,125 @@
+- hosts: base_machines
+  become: yes
+  become_method: sudo
+  roles:
+    - update-accounts
+  tasks:
+    - name: Set up shared directory for base machine
+      file:
+        path: "/home/shared"
+        state: directory
+        recurse: yes
+        owner: "root"
+        group: "fileshare"
+        mode: 2775
+    - name: Copy compose directory
+      copy: src="files/reservoir" dest="/" force=yes
+    - name: Copy memory limit script
+      copy:
+        src: files/reservoir/make_user_mem_limit_files.py
+        dest: /
+        owner: root
+        group: root
+        mode: 0700
+    - name: make scripts directory on host
+      file:
+        path: /root/scripts
+        state: directory
+        mode: '0755'
+      when: inventory_hostname == "prospero"
+    - name: copy scripts to host
+      copy:
+        src: "./scripts/{{ item }}"
+        dest: /root/scripts
+        mode: '0755'
+      become: yes
+      loop:
+        - "install_container_toolkit.sh"
+      when: inventory_hostname == "prospero"
+    - name: install nvidia toolkit only on prospero
+      command: /root/scripts/install_container_toolkit.sh
+      when: inventory_hostname == "prospero"
+    - name: reboot to complete cuda driver install
+      reboot:
+      when: inventory_hostname == "prospero"
+    - name: create symlink
+      file:
+        src: /usr/lib/x86_64-linux-gnu/libOpenCL.so.1
+        dest: /usr/lib/libOpenCL.so
+        state: link
+      when: inventory_hostname == "prospero"
+    - name: Start services
+      docker_compose:
+        project_src: "/reservoir/"
+        pull: true
+        recreate: always
+        restarted: yes
+        files:
+          - "docker-compose-{{ inventory_hostname }}.yml"
+      environment:
+        NGINX_HOSTNAME: "{{inventory_hostname}}"
+        HOSTNAME: "{{reservoir_hostname}}"
+        # RESERVOIR_IMAGE: "{{reservoir_image | default('ghcr.io/ecohealthalliance/reservoir:base')}}"
+        Controller_IMAGE: "{{controller_image | default('ghcr.io/ecohealthalliance/slurm_reservoir:controller-gpu')}}"
+        Worker_IMAGE: "{{worker_image | default('ghcr.io/ecohealthalliance/slurm_reservoir:worker-gpu')}}"
+        RESERVOIR_USER_PASSWORD: "{{reservoir_user_password}}"
+        RUNTIME: "{{machine_runtime | default('runc')}}"
+        CONTAINER_MEM_LIMIT: "{{container_mem_limit}}"
+    - pause:
+        seconds: 15
+    - name: Ensure reservoir_host_keys has correct permissions set
+      file:
+        path: /reservoir_host_keys
+        mode: '700'
+    # Mounting the full ssh directory makes it so some things can't be updated in the base image, so
+    # instead a new directory is created and the configuration is updated to point to that.
+   # New tasks for SSH host keys and SSHD configuration
+    - name: Copy and set permissions for SSH host keys
+      block:
+        - name: Copy SSH host keys to {{ item }}
+          command: docker cp /path/to/ssh_host_keys_dir ssh_host_keys {{ item }}:/etc/ssh/
+          loop: "{{ slurm_containers }}"
+
+        - name: Set correct permissions for SSH host keys in {{ item }}
+          command: docker exec {{ item }} chmod 600 /etc/ssh/ssh_host_keys/*
+          loop: "{{ slurm_containers }}"
+
+    - name: Update and restart SSH service in containers
+      block:
+        - name: Update SSH configuration in {{ item }}
+          command: docker exec -it {{ item }} sed -i -E 's@^#HostKey /etc/ssh/(.+)$@HostKey /etc/ssh/host_keys/\1@g' /etc/ssh/sshd_config
+          loop: "{{ slurm_containers }}"
+
+        - name: Restart SSH service in {{ item }}"
+          command: docker exec {{ item }} service ssh restart
+          loop: "{{ slurm_containers }}"
+
+    - name: Copy memory limit script to containers
+      block:
+        - name: Copy memory limit script to {{ item }}
+          command: docker cp /path/to/make_user_mem_limit_files.py {{ item }}:/
+          loop: "{{ slurm_containers }}"
+- name: deploy GitHub runners if needed
+  import_playbook: deploy-github-runner-svc.yml
+- hosts: docker_containers
+  become: yes
+  become_method: sudo
+  roles:
+    - update-accounts
+  tasks:
+    - name: Create gurobi dir
+      file: path=/opt/gurobi810 state=directory
+    - name: Create gurobi license
+      copy:
+        content: |
+          PASSWORD={{gurobi_password}}
+          TOKENSERVER=aegypti.ecohealthalliance.org
+          PORT=60954
+        dest: "/opt/gurobi810/gurobi.lic"
+    - name: Run script to create systemd memory limit files in each container
+      command: docker exec -it {{ item }} /make_user_mem_limit_files.py
+      loop: "{{ slurm_containers }}"
+
+  vars_files:
+    - secure.yml
+    - containers.yml

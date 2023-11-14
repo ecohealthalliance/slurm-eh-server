@@ -1,0 +1,53 @@
+- hosts: prospero
+  become: yes
+  become_user: root
+  vars:
+    backup_keys:
+      - backup.key
+      - backup.secret.key
+    aws_keys_file: host_vars/prospero/aws_keys.yml
+    restore_directory: "" # Specify the directory to restore, e.g., "/username", or leave empty to restore all directories
+  tasks:
+    - name: Create restore script
+      template:
+        src: files/restore_backup.sh.j2
+        dest: /root/restore.sh
+        owner: root
+        mode: u=rwx,g=,o=
+
+    - name: Copy keys
+      copy:
+        src: "{{ item }}"
+        dest: "/root"
+      with_items: "{{ backup_keys }}"
+
+    - name: Install backup keys
+      shell: "gpg --import /root/{{ item }}"
+      with_items: "{{ backup_keys }}"
+
+    - file:
+        path: "/root/{{ item }}"
+        state: absent
+      with_items: "{{ backup_keys }}"
+
+    - name: Install duplicity package
+      command: "pip install duplicity"
+
+    - name: Copy restore script
+      copy:
+        src: files/restore.sh
+        dest: /root/restore.sh
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Run restore script
+      command: "bash /root/restore.sh"
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_keys.access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_keys.secret_key }}"
+      when: restore_directory is defined and restore_directory != ""
+
+  vars_files:
+    - secure.yml
+    - "{{ aws_keys_file }}"

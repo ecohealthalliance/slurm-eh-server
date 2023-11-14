@@ -1,0 +1,27 @@
+---
+- hosts: base_machines
+  vars:
+    runner_labels: "self-hosted,linux,x64,{{ runner_name }}"
+    runner_dir: /home/githubrunner/local/github_runner
+  become: true
+  become_user: githubrunner
+  tasks:
+    - name: make directory on local filesystem
+      file:
+        path: "{{ runner_dir }}"
+        state: directory
+        mode: '0755'
+    - name: download runner code archive and expand
+      unarchive:
+        src: https://github.com/actions/runner/releases/download/v2.284.0/actions-runner-linux-x64-2.284.0.tar.gz
+        dest: "{{ runner_dir }}"
+        remote_src: yes
+    - name: get registration token
+      shell: "curl -X POST -H \"Accept: application/vnd.github.v3+json\" -u RobJY:{{ github_runner_org_pat }} https://api.github.com/orgs/ecohealthalliance/actions/runners/registration-token"
+      register: registration_token
+    - name: configure runner
+      command: "{{ runner_dir }}/config.sh --unattended --url https://github.com/ecohealthalliance --token {{ registration_token.stdout|from_json|json_query('token') }} --name {{ runner_name }} --labels {{ runner_labels }} --pat {{ github_runner_org_pat }}"
+    - name: start runner in background with logging
+      shell: "cd {{ runner_dir }}; nohup ./run.sh </dev/null > runner.log 2>&1 &"
+  vars_files:
+    - secure.yml

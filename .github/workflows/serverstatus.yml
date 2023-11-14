@@ -1,0 +1,37 @@
+name: Update Server Status
+
+on:
+  schedule:
+    - cron: "0 * * * *" # Runs every hour
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Install dependencies
+      run: pip install requests
+
+    - name: Run script and update README
+      run: |
+        python server-status/sycorax.py > server_statuses.txt
+        echo "## Server Status" > README.md
+        while IFS= read -r line; do
+          echo "- $line" >> README.md
+        done < server_statuses.txt
+      shell: bash
+
+    - name: Commit and push changes
+      run: |
+        git config user.name "espirado"
+        git config user.email "espira@ecohealthalliance.org"
+        git add README.md
+        git commit -m "Update server statuses"
+        git push

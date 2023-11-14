@@ -1,0 +1,113 @@
+# ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook aws-deploy-container.yml --private-key ~/.keys/temp-instances.pem
+- hosts: localhost
+  roles:
+    - name: provision-instances
+      instance_size: t3.small
+      aws_security_group: temp-instances
+      key_name: temp-instances
+      instance_tag: eha-server
+      hostname: ec2host
+      host_group: ec2hosts
+      region: us-east-1
+      volume_size: 350
+      instance_tags:
+        project: eha-server
+        "user:Owner": eha
+  tasks:
+    - name: Add docker ssh hosts
+      add_host:
+        hostname: "ec2dockerhost"
+        ansible_host: "{{ item.public_ip }}"
+        ansible_port: 22022
+        ansible_ssh_user: ansible
+        ansible_ssh_pass: "{{ reservoir_user_password }}"
+        ansible_become_pass: "{{ reservoir_user_password }}"
+        ansible_python_interpreter: "/usr/bin/python3"
+        groups:
+          - "ec2dockerhosts"
+      with_items: "{{ec2.tagged_instances}}"
+    - debug: var="hostvars['ec2dockerhost'].ansible_host"
+  vars_files:
+    - secure.yml
+
+- hosts: ec2hosts
+  become: yes
+  become_user: root
+  roles:
+    - name: angstwad.docker_ubuntu
+      tags: docker
+  tasks:
+    - name: Copy compose directory
+      copy: src="files/reservoir" dest="/"
+    - name: Start services
+      docker_service:
+        project_src: "/reservoir/"
+        pull: true
+      environment:
+        HOSTNAME: "remote"
+        RESERVOIR_IMAGE: "{{reservoir_image | default('ghcr.io/ecohealthalliance/reservoir:base')}}"
+        RESERVOIR_USER_PASSWORD: "{{reservoir_user_password}}"
+        RUNTIME: "{{machine_runtime | default('runc')}}"
+        # rstuio runs on a port on the AWS machine because the nginx proxy used by the
+        # on-site machines requires a domain name to be set up.
+        AUX_PORTS: "22088:8787"
+    - pause:
+        seconds: 15
+  vars_files:
+    - secure.yml
+
+- hosts: ec2dockerhosts
+  become: yes
+  become_method: sudo
+  vars_prompt:
+    - name: users_to_restore
+      prompt: "What user directories would you like to restore? (Enter comma separated values without spaces.)"
+      private: no
+      default: "none"
+  vars:
+    # The date of the backup can be set here using a flag like -t 3D
+    duplicity_extra_args: ""
+    is_docker_container: true
+    is_remote_host: true
+    backup_keys:
+      - backup.key
+      - backup.secret.key
+  roles:
+    - update-accounts
+  tasks:
+    - when: users_to_restore != "none"
+      block:
+      - name: Copy keys
+        copy: src="{{item}}" dest="/root"
+        with_items: "{{backup_keys}}"
+      - shell: "gpg --import /root/{{item}}"
+        with_items: "{{backup_keys}}"
+      - name: Install duplicity dependencies
+        apt:
+          name: "{{ packages }}"
+        vars:
+          packages:
+          - librsync-dev
+          - python-dev
+      - name: Downlaod duplicity
+        command: "wget https://code.launchpad.net/duplicity/0.7-series/0.7.19/+download/duplicity-0.7.19.tar.gz"
+        args:
+          chdir: "/root"
+          creates: "/root/duplicity-0.7.19.tar.gz"
+      - command: "tar -xvzf duplicity-0.7.19.tar.gz"
+        args:
+          chdir: "/root"
+          creates: "/root/duplicity-0.7.19"
+      - name: "Install duplicity"
+        command: "python setup.py install"
+        args:
+          chdir: "/root/duplicity-0.7.19"
+      - command: "pip install b2 fasteners"
+      - shell: "/usr/local/bin/duplicity restore b2://{{ b2_account_id }}:{{ b2_application_key }}@ehahomebackups/backupof{{item}} /home/{{item}} --encrypt-key={{gpg_key}} --sign-key={{gpg_key}} --force {{duplicity_extra_args}}"
+        environment:
+          PASSPHRASE: ""
+        with_items: "{{ users_to_restore.split(',') }}"
+    - debug:
+        msg: "Server address: http://{{hostvars['ec2dockerhost'].ansible_host}}:22088"
+  vars_files:
+    - secure.yml

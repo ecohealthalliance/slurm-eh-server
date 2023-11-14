@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+  rstudio:
+    image: ${RESERVOIR_IMAGE}
+    hostname: ${HOSTNAME}
+    environment:
+      - USER=ansible
+      - USERID=1111
+      - ROOT=true
+      - PASSWORD=${RESERVOIR_USER_PASSWORD}
+    privileged: true
+    ports:
+      - "22022:22"
+      - "60990-61000:60990-61000/udp"
+      - ${AUX_PORTS:-9000}
+    volumes:
+      - "/home:/home"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/local:/local"
+      - "/home/shared:/shared"
+      - "/home/crontabs/${HOSTNAME}/:/var/spool/cron/crontabs"
+      - "/archive:/archive"
+      - "/reservoir_host_keys:/etc/ssh/host_keys"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: ${CONTAINER_MEM_LIMIT}
+    networks:
+      - eha-servers
+
+  nginx:
+    image: linuxserver/swag
+    restart: always
+    environment:
+      EMAIL: tech@ecohealthalliance.org
+      URL: ${NGINX_HOSTNAME}.ecohealthalliance.org
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - "/reservoir/site-confs:/config/nginx/site-confs/"
+      - "/reservoir/www:/config/www"
+    networks:
+      - eha-servers
+
+  rshinyauth0:
+    image: "node:7"
+    restart: always
+    working_dir: /home/node/app
+    environment:
+      NODE_ENV: production
+    volumes:
+      - /rshinyauth0:/home/node/app
+    command: "bash -c 'npm install && npm start'"
+    networks:
+      - eha-servers
+
+networks:
+  eha-servers:

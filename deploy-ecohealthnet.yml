@@ -1,0 +1,14 @@
+- hosts: prospero
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Copy ecohealthnet directory
+      copy: src="files/ecohealthnet/" dest="/ecohealthnet"
+    - name: Start services
+      docker_service:
+        project_src: "/ecohealthnet"
+        pull: true
+      environment:
+        ECOHEALTHNET_ADMIN_PASSWORD: "{{ecohealthnet_admin_password}}"
+  vars_files:
+    - secure.yml
