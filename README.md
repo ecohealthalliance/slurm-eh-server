@@ -7,10 +7,9 @@ EHA has two high-performance Linux servers which can be used for modeling and
 analysis work:
 
 -   ***Aegypti***: 2 10-core 3.0Ghz processors, (40 virtual cores), 256GB of RAM
--   ***Prospero***: 2 18-core 3.7Ghz processors, (72 virtual cores), 512GB of RAM, 4 GPU (2
+-   ***Prospero***: 2 18-core 3.7Ghz processors, (72 virtual cores), 512GM of RAM, 4 GPU (2
     NVIDIA GTX, 2 NVIDIA 1080)
 -   ***Sycorax***: 64-core 4.5Ghz processor, (128 threads), 512GB of RAM, 2 GPU (GeForce RTX 4090 with 32768 CUDA Cores)
-
 These servers can be accessed from anywhere you have Internet, and are
 excellent for long-running, compute- or memory-intensive jobs.
 
@@ -37,15 +36,16 @@ guide](https://ecohealthalliance.github.io/eha-ma-handbook/).
 
 ## Getting an account
 
-To get an account on the server, contact admins (currently Robert Young (young@ecohealthalliance.org)) and provide
+To get an account on the server, contact admins (currently Andrew Espira (espira@ecohealthalliance.org)) and provide
 a preferred username and password.
 
 ## RStudio interface and R Setup
 
 For much work, you can use the RStudio interface to the servers, which
 is very similar to RStudio Desktop. Just visit
-<https://aegypti.ecohealthalliance.org/rstudio> or
-<https://prospero.ecohealthalliance.org/rstudio>.
+<https://aegypti.ecohealthalliance.org/rstudio> ,
+<https://prospero.ecohealthalliance.org/rstudio> or 
+<https://sycorax.ecohealthalliance.org/rstudio>.
 
 Both machines have a large number of R packages pre-installed, but you
 are free to install additional packages that you need. These packages
@@ -58,12 +58,17 @@ Prospero has GPU-enabled versions of some R and Python packages, such as
 ## Hard Disks
 
 There are approximately 7 terabytes of space on the shared hard disk.
-Whether you log on to `prospero` or `aegypti`, you'll find your files
+Whether you log on to `prospero` , `aegypti`or `sycorax`, you'll find your files
 are the same. The two computers share a common hard drive for user
 files, so you can easily switch computers without moving your work. Note
 that, since RStudio saves information about your session on the hard
 disk, you will likely experience some issues if you try to use RStudio
 for the same project on both machines at once.
+
+If you have very large files/data its advisable to have them in `work/`
+directory to avoiding taking up space in your `home/` directory. 
+The data can be accessed in either of the machine logged in. 
+
 
 Because the disk is network-attached, it can be slightly slower than
 direct hard disk access. If you are running a process where hard disk
@@ -155,15 +160,23 @@ the path you should [use the **here** package in your R scripts](https://github.
           StrictHostKeyChecking no
           UserKnownHostsFile /dev/null
 
-    With this in place, you can log in by typing `ssh aegypti` or
-    `ssh prospero` in the terminal. It will also ensure that when we change the servers'
+
+        Host sycorax sycorax.ecohealthalliance.org
+          HostName sycorax.ecohealthalliance.org
+          User yourusername
+          Port 22022
+          StrictHostKeyChecking no
+          UserKnownHostsFile /dev/nul 
+
+    With this in place, you can log in by typing `ssh aegypti` 
+    `ssh prospero` or `ssh sycorax`  in the terminal. It will also ensure that when we change the servers'
     configuration, your computer doesn't panic and think there's a
     security issue.
 
 -   `mosh` is an alternative to SSH that is more robust to intermittent
     Internet connections. Once you have done the `.ssh/config` set up
     above, you can drop in mosh instead of ssh to connect, e.g.,
-    `mosh aegypti` or `mosh prospero`. Get mosh at <https://mosh.org/>
+    `mosh aegypti` , `mosh prospero` or `mosh sycorax`. Get mosh at <https://mosh.org/>
 
 -   When you log in via SSH or the RStudio terminal, you will be dropped
     into a program called [`byobu`](http://byobu.co/), which is a thin
@@ -213,9 +226,11 @@ Finally, your scripts should save your results without intervention,
 and it is good practice to have them save results from intermediate steps and parallel processes in case they are interrupted and so you can monitor progress.
 We recommend using the [`targets`](https://ecohealthalliance.github.io/eha-ma-handbook/2-projects.html#targets) package for many such jobs.
 
+## Using GPUS 
+
 ## Server Etiquette and Communication
 
-Aegypti and Prospero are shared resources and only work if we use them
+Aegypti ,Prospero and sycorax  are shared resources and only work if we use them
 politely. The servers are *not* good for:
 
 -   Storing private collections of data. *There is no expectation of
