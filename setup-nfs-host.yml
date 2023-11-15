@@ -1,65 +1,89 @@
-- hosts: prospero
-  become: yes
-  become_method: sudo
-  tasks:
-    - apt: pkg=nfs-kernel-server
-    # - lineinfile:
-    #   path: /etc/exports
-    #   line: "/home       aegypti.local(rw,sync,no_root_squash,no_subtree_check)"
-    - service:
-        name: nfs-kernel-server
-        state: restarted
-  vars_files:
-    - secure.yml
-
-# - hosts: aegypti
-#   become: yes
-# become_method: sudo
-# tasks:
-# - apt: pkg=nfs-common
-# - find:
-#   paths: /home
-# patterns: "*.*"
-# register: foundFiles
-# - assert:
-#   that: "foundFiles.matched == 0"
-# msg: "/home must be empty"
-# - mount:
-#   backup: yes
-# path: /home
-# src: prospero.local:/home
-# fstype: nfs
-# opts: auto,nofail,noatime,nolock,intr,tcp,actimeo=1800
-# state: mounted
-#   vars_files:
-#   - secure.yml
-
 - hosts: base_machines
   become: yes
   become_method: sudo
+  vars_files:
+    - secure.yml
   tasks:
-    - apt: pkg=nfs-common
+    # Uncomment and configure the following tasks as needed for NFS server setup
+    # - name: Install NFS server package
+    #   apt:
+    #     name: nfs-kernel-server
+    #     state: present
+    # - name: Configure NFS to export /home
+    #   lineinfile:
+    #     path: /etc/exports
+    #     line: "/home       aegypti.local(rw,sync,no_root_squash,no_subtree_check)"
+    # - name: Restart NFS kernel server
+    #   service:
+    #     name: nfs-kernel-server
+    #     state: restarted
+    - name: Install NFS common package
+      apt:
+        name: nfs-common
+        state: present
     - name: Create archive directory
       file:
         state: directory
         path: "/archive"
-    - mount:
+    # Uncomment and configure the following tasks as needed for NFS mounting
+    # - name: Mount NFS share at /archive/users
+    #   mount:
+    #     backup: yes
+    #     path: /archive/users
+    #     src: 10.0.0.16:/volume1/nfs
+    #     fstype: nfs
+    #     opts:  _netdev,auto,nofail,noatime,nolock,intr,tcp,actimeo=1800
+    #     state: mounted
+
+- hosts: aegypti
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Install NFS client package
+      apt:
+        name: nfs-common
+        state: present
+    - name: Create mount point for /home
+      file:
+        path: /home
+        state: directory
+    - name: Check if /home is empty
+      find:
+        paths: /home
+        patterns: "*.*"
+      register: foundFiles
+    - name: Assert /home is empty
+      assert:
+        that: "foundFiles.matched == 0"
+        msg: "/home must be empty"
+    - name: Mount NFS share at /home
+      mount:
+        backup: yes
+        path: /home
+        src: sycorax.local:/home
+        fstype: nfs
+        opts: auto,nofail,noatime,nolock,intr,tcp,actimeo=1800
+        state: mounted
+
+- hosts: docker_containers
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Install NFS common package
+      apt:
+        name: nfs-common
+        state: present
+    - name: Create archive directory
+      file:
+        state: directory
+        path: "/archive"
+    - name: Mount NFS share at /archive/users
+      mount:
         backup: yes
         path: /archive/users
         src: 10.0.0.16:/volume1/nfs
         fstype: nfs
-        opts: auto,nofail,noatime,nolock,intr,tcp,actimeo=1800
+        opts:  _netdev,auto,nofail,noatime,nolock,intr,tcp,actimeo=1800
         state: mounted
-    # - mount:
-    #  backup: yes
-    # path: "/archive/{{item}}"
-    #  src: "10.0.0.16:/{{item}}"
-    #  fstype: nfs
-    #  opts: ro,auto,nofail,noatime,nolock,intr,tcp,actimeo=1800
-    #   state: mounted
-    # with_items:
-    # - "Birds"
-    # - "GIS"
-    # - "gisdata"
   vars_files:
     - secure.yml

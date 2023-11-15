@@ -2,20 +2,36 @@
   become: yes
   become_method: sudo
   tasks:
-    - name: Add Docker key
-      shell: "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -"
+    - name: Ensure curl is installed
+      apt:
+        name: curl
+        update_cache: yes
+        state: present
+
+    - name: Add Docker GPG key directly
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
     - name: Add Docker repository
-      shell: |
-        add-apt-repository \
-        "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-        $(lsb_release -cs) \
-        stable"
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
     - name: Install (or update) docker package
       apt:
         name: "docker-ce"
         update_cache: yes
+
+    - name: Ensure python3-pip is installed
+      apt:
+        name: python3-pip
+        update_cache: yes
+        state: present
+
     - name: Install docker-compose
       pip:
         name:
           - setuptools
           - docker-compose==1.29.2
+        executable: pip3

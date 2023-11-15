@@ -1,12 +1,11 @@
-version: '3.1'
+version: '3'
 
 services:
   controller:
-    image:  ${controller_image}
+    image: ${controller_image}
     container_name: controller
     privileged: true
     volumes:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "/home:/home"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/local:/local"
@@ -25,7 +24,7 @@ services:
     environment:
       USER: ansible
       USERID: 1111
-      ROOT: true
+      ROOT: 'true'
       PASSWORD: ${RESERVOIR_USER_PASSWORD}
       USE_SLURMDBD: 'true'
       CLUSTER_NAME: megatron
@@ -78,8 +77,7 @@ services:
         reservations:
           cpus: '2'
           memory: 8G
-          devices:
-            - capabilities: ["gpu"]
+         
 
   worker02:
     image: ${worker_image}
@@ -113,8 +111,7 @@ services:
         reservations:
           cpus: '2'
           memory: 8G
-          devices:
-            - capabilities: ["gpu"]
+          
 
 
   worker03:
@@ -149,11 +146,10 @@ services:
         reservations:
           cpus: '2'
           memory: 8G
-          devices:
-            - capabilities: ["gpu"]                     
+                             
 
 
-worker04:
+  worker04:
     image: ${worker_image}
     depends_on:
       - controller
@@ -185,8 +181,7 @@ worker04:
         reservations:
           cpus: '2'
           memory: 8G
-          devices:
-            - capabilities: ["gpu"]
+          
 
 networks:
   slurm:
