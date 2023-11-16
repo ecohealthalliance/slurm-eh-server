@@ -4,4 +4,13 @@ secure.yml filter=git-crypt diff=git-crypt
 .env filter=git-crypt diff=git-crypt
 repeldb/.env filter=git-crypt diff=git-crypt
 group_vars/base_machines/base_machines.yml filter=git-crypt diff=git-crypt
-files/reservoir_host_keys/* filter=git-crypt diff=git-crypt
+files/reservoir_host_keys/* filter=git-crypt diff=git-crypt  diff=git-crypt
+group_vars/base_machines/base_machines.yml filter=git-crypt diff=git-crypt
+reservoir_host_keys/ssh_host_ecdsa_key filter=git-crypt diff=git-crypt
+reservoir_host_keys/ssh_host_ecdsa_key.pub filter=git-crypt diff=git-crypt
+reservoir_host_keys/ssh_host_ed25519_key filter=git-crypt diff=git-crypt
+reservoir_host_keys/ssh_host_ed25519_key.pub filter=git-crypt diff=git-crypt
+reservoir_host_keys/ssh_host_rsa_key filter=git-crypt diff=git-crypt
+reservoir_host_keys/ssh_host_rsa_key.pub filter=git-crypt diff=git-crypt
+group_vars/* filter=git-crypt diff=git-crypt
+host_vars/* filter=git-crypt diff=git-crypt
