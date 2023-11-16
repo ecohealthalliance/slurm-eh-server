@@ -4,3 +4,4 @@ secure.yml filter=git-crypt diff=git-crypt
 .env filter=git-crypt diff=git-crypt
 repeldb/.env filter=git-crypt diff=git-crypt
 group_vars/base_machines/base_machines.yml filter=git-crypt diff=git-crypt
+files/reservoir_host_keys/* filter=git-crypt diff=git-crypt

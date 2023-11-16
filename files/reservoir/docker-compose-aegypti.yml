@@ -16,11 +16,12 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "/secret:/.secret"
     restart: always
-    hostname: controller.local.dev
+    hostname: ${HOSTNAME}
     networks:
       - slurm
     ports:
-      - 8787:8787
+      - "22022:22"
+      - "8787:8787"
     environment:
       USER: ansible
       USERID: 1111
@@ -63,9 +64,11 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "./secret:/.secret"
     restart: always
-    hostname: worker01.local.dev
+    hostname: ${HOSTNAME}
     networks:
       - slurm
+    ports:
+      - "22026:22"
     environment:
       CONTROL_MACHINE: controller.local.dev
       ACCOUNTING_STORAGE_HOST: controller
@@ -97,9 +100,11 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "./secret:/.secret"
     restart: always
-    hostname: worker02.local.dev
+    hostname: ${HOSTNAME}
     networks:
       - slurm
+    ports:
+      - "22023:22"
     environment:
       CONTROL_MACHINE: controller.local.dev
       ACCOUNTING_STORAGE_HOST: controller
@@ -132,9 +137,11 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "./secret:/.secret"
     restart: always
-    hostname: worker03.local.dev
+    hostname: ${HOSTNAME}
     networks:
       - slurm
+    ports:
+      - "22024:22" 
     environment:
       CONTROL_MACHINE: controller.local.dev
       ACCOUNTING_STORAGE_HOST: controller
@@ -167,9 +174,11 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "./secret:/.secret"
     restart: always
-    hostname: worker04.local.dev
+    hostname: ${HOSTNAME}
     networks:
       - slurm
+    ports:
+      - "22025:22" 
     environment:
       CONTROL_MACHINE: controller.local.dev
       ACCOUNTING_STORAGE_HOST: controller

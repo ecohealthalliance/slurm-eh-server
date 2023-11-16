@@ -1,6 +1,6 @@
 ---
 ansible_host: aegypti.ecohealthalliance.org
-ansible_port: 22022
+ansible_port: 22026
 ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 ansible_python_interpreter: /usr/bin/python3
 ansible_user: ansible
@@ -9,4 +9,3 @@ ansible_become_pass: kangaroo679bike432ear
 is_docker_container: true
 # For NFS systems user homes should only be set up on one of the hosts.
 create_user_homes: no
-
