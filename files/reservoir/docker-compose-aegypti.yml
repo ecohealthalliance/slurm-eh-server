@@ -1,4 +1,4 @@
-version: '3'
+version: '2.3'
 
 services:
   controller:
@@ -16,7 +16,7 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "/secret:/.secret"
     restart: always
-    hostname: ${HOSTNAME}
+    hostname: controller.local.dev
     networks:
       - slurm
     ports:
@@ -64,12 +64,16 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "./secret:/.secret"
     restart: always
-    hostname: ${HOSTNAME}
+    hostname:  worker01.local.dev
     networks:
       - slurm
     ports:
       - "22026:22"
     environment:
+      USER: ansible
+      USERID: 1111
+      ROOT: 'true'
+      PASSWORD: ${RESERVOIR_USER_PASSWORD}
       CONTROL_MACHINE: controller.local.dev
       ACCOUNTING_STORAGE_HOST: controller
     deploy:
@@ -100,12 +104,16 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "./secret:/.secret"
     restart: always
-    hostname: ${HOSTNAME}
+    hostname: worker02.local.dev
     networks:
       - slurm
     ports:
       - "22023:22"
     environment:
+      USER: ansible
+      USERID: 1111
+      ROOT: 'true'
+      PASSWORD: ${RESERVOIR_USER_PASSWORD}
       CONTROL_MACHINE: controller.local.dev
       ACCOUNTING_STORAGE_HOST: controller
     deploy:
@@ -137,12 +145,16 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "./secret:/.secret"
     restart: always
-    hostname: ${HOSTNAME}
+    hostname: worker03.local.dev
     networks:
       - slurm
     ports:
       - "22024:22" 
     environment:
+      USER: ansible
+      USERID: 1111
+      ROOT: 'true'
+      PASSWORD: ${RESERVOIR_USER_PASSWORD}
       CONTROL_MACHINE: controller.local.dev
       ACCOUNTING_STORAGE_HOST: controller
     deploy:
@@ -174,12 +186,16 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "./secret:/.secret"
     restart: always
-    hostname: ${HOSTNAME}
+    hostname: worker04.local.dev
     networks:
       - slurm
     ports:
       - "22025:22" 
     environment:
+      USER: ansible
+      USERID: 1111
+      ROOT: 'true'
+      PASSWORD: ${RESERVOIR_USER_PASSWORD}
       CONTROL_MACHINE: controller.local.dev
       ACCOUNTING_STORAGE_HOST: controller
     deploy:

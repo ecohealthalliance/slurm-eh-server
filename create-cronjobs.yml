@@ -1,4 +1,4 @@
-- hosts: prospero
+- hosts: base_machines
   become: yes
   become_user: root
   vars:

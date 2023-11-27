@@ -113,6 +113,5 @@ for i in $(find /home/ -maxdepth 1 -type d -regextype sed -regex '.*/[a-zA-Z0-9\
     echo "CloudWatchError: $i Full Backup is missing!"
   fi
 done
-
 unset IFS
 rm /root/.backup_in_progress

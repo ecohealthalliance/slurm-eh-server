@@ -73,10 +73,22 @@
     - name: Ensure reservoir_host_keys has correct permissions set
       file:
         path: /reservoir_host_keys
-        mode: '700'
+        mode: '600'
     # Mounting the full ssh directory makes it so some things can't be updated in the base image, so
     # instead a new directory is created and the configuration is updated to point to that.
    # New tasks for SSH host keys and SSHD configuration
+      
+         
+
+    - name: Copy SSH public key to {{ item }}
+      command: docker cp /reservoir_host_keys/ansible_ssh_key.pub {{ item }}:/tmp/ansible_ssh_key.pub
+      loop: "{{ slurm_containers }}"
+
+    - name: Append SSH public key to authorized_keys in {{ item }}
+      command: docker exec {{ item }} bash -c "cat /tmp/ansible_ssh_key.pub >> /home/ansible/.ssh/authorized_keys"
+      loop: "{{ slurm_containers }}"
+ 
+
 
 
     - name: Copy SSH host keys into {{ item[0] }} container
