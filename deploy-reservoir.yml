@@ -2,8 +2,8 @@
   become: yes
   become_method: sudo
   vars_files:
-    - secure.yml
-    - containers.yml
+    -  secure.yml
+    -  containers.yml
     
   roles:
     - update-accounts
@@ -70,47 +70,37 @@
         CONTAINER_MEM_LIMIT: "{{container_mem_limit}}"
     - pause:
         seconds: 40
-    - name: Ensure reservoir_host_keys has correct permissions set
+    - name: Ensure reservoir_host_keys directory has correct permissions
       file:
-        path: /reservoir_host_keys
-        mode: '600'
+       path: /reservoir_host_keys
+       state: directory
+       mode: '700'
     # Mounting the full ssh directory makes it so some things can't be updated in the base image, so
     # instead a new directory is created and the configuration is updated to point to that.
    # New tasks for SSH host keys and SSHD configuration
       
-         
 
-    - name: Copy SSH public key to {{ item }}
-      command: docker cp /reservoir_host_keys/ansible_ssh_key.pub {{ item }}:/tmp/ansible_ssh_key.pub
+    - name: Ensure reservoir_host_keys directory in containers has correct permissions
+      command: docker exec -it {{ item }}  chmod 700 /etc/ssh/host_keys
       loop: "{{ slurm_containers }}"
-
-    - name: Append SSH public key to authorized_keys in {{ item }}
-      command: docker exec {{ item }} bash -c "cat /tmp/ansible_ssh_key.pub >> /home/ansible/.ssh/authorized_keys"
-      loop: "{{ slurm_containers }}"
- 
-
-
-
-    - name: Copy SSH host keys into {{ item[0] }} container
-      command: docker cp /reservoir_host_keys/{{ item[1] }} {{ item[0] }}:/etc/ssh/host_keys/
-      loop: "{{ slurm_containers | product(['ssh_host_rsa_key', 'ssh_host_ecdsa_key', 'ssh_host_ed25519_key']) | list }}"
-
-
-
-    - name: Ensure reservoir host SSH keys in container have correct permissions
-      command: docker exec {{ item[0] }} chmod 600 /etc/ssh/host_keys/{{ item[1] }}
-      with_nested:
-        - "{{ slurm_containers }}"
-        - [ "ssh_host_rsa_key", "ssh_host_ecdsa_key", "ssh_host_ed25519_key" ]
-
 
 
     - name: Update and restart SSH service in containers
       block:
-        - name: Update SSH configuration in {{ item }}
-          command: docker exec -it {{ item }} sed -i -E 's@^#HostKey /etc/ssh/(.+)$@HostKey /etc/ssh/host_keys/\1@g' /etc/ssh/sshd_config
+        - name: Update SSH configuration in containers
+          command: docker exec -it {{ item }} sed -i -E 's@^#HostKey \/etc\/ssh\/(.+)$@HostKey \/etc\/ssh\/host_keys\/\1@g' /etc/ssh/sshd_config
           loop: "{{ slurm_containers }}"
   
+
+
+        - name: Ensure reservoir host SSH keys in {{ item[0] }} have correct permissions
+          command: docker exec {{ item[0] }} chmod 600 /etc/ssh/host_keys/{{ item[1] }}
+          loop: "{{ slurm_containers | product(['ssh_host_rsa_key', 'ssh_host_ecdsa_key', 'ssh_host_ed25519_key' ]) | list }}"
+          loop_control:
+            loop_var: item
+
+
+
         - name: Restart each container so config changes take effect
           command: docker restart {{ item }}
           loop: "{{ slurm_containers }}"
@@ -121,8 +111,6 @@
            - name: Copy memory limit script to {{ item }}
              command: docker cp /make_user_mem_limit_files.py {{ item }}:/
              loop: "{{ slurm_containers }}"
-
-
 
 
 

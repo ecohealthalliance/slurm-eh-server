@@ -1,4 +1,4 @@
-version: '2.3'
+version: '3'
 
 services:
   controller:
@@ -16,7 +16,7 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "/secret:/.secret"
     restart: always
-    hostname: controller.local.dev
+    hostname: ${HOSTNAME}
     networks:
       - slurm
     ports:
