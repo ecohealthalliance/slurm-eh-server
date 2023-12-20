@@ -1,13 +1,13 @@
 version: '3.1'
 
 services:
-  prospero_worker:
+  sycorax_worker:
     image: ${worker_image}
     deploy:
       resources:
         limits:
-          cpus: '70'
-          memory: 51500M
+          cpus: '128'
+          memory: 250000M
     container_name: prospero_worker
     privileged: true
     volumes:
@@ -25,7 +25,7 @@ services:
     networks:
       - slurm
     ports:
-      - "22026:22"
+      - "22023:22"
     environment:
         USER: ansible
         USERID: 111
@@ -34,6 +34,7 @@ services:
         PARTITION_NAME: non-gpu
         CONTROL_MACHINE: controller.local.dev
         ACCOUNTING_STORAGE_HOST: controller
+       
    
     
   
