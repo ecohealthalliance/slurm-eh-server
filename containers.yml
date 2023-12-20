@@ -1,8 +1,7 @@
 # vars.yml
 slurm_containers:
   - controller
-  - worker01
-  - worker02
-  - worker03
-  - worker04
+  - aegypti_worker
+  - prospero_worker
+  - sycorax_worker
 

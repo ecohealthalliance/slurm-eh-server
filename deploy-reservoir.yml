@@ -101,9 +101,9 @@
 
 
 
-        - name: Restart each container so config changes take effect
-          command: docker restart {{ item }}
-          loop: "{{ slurm_containers }}"
+        #- name: Restart each container so config changes take effect
+         # command: docker restart {{ item }}
+         # loop: "{{ slurm_containers }}"
 
 
         - name: Copy memory limit script to containers
