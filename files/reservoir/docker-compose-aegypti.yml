@@ -1,8 +1,13 @@
-version: '3'
+version: '3.1'
 
 services:
   controller:
     image: ${controller_image}
+    deploy:
+      resources:
+        limits:
+          cpus: '20'
+          memory: 200000M
     container_name: controller
     privileged: true
     volumes:
@@ -14,7 +19,7 @@ services:
       - "/archive:/archive"
       - "/work:/work"
       - "/reservoir_host_keys:/etc/ssh/host_keys"
-      - "/secret:/.secret"
+      -  "./secret:/.secret"
     restart: always
     hostname: ${HOSTNAME}
     networks:
@@ -24,7 +29,7 @@ services:
       - "8787:8787"
     environment:
       USER: ansible
-      USERID: 1111
+      USERID: 111
       ROOT: 'true'
       PASSWORD: ${RESERVOIR_USER_PASSWORD}
       USE_SLURMDBD: 'true'
@@ -33,27 +38,23 @@ services:
       SLURMD_PORT: 6819
       ACCOUNTING_STORAGE_HOST: localhost
       ACCOUNTING_STORAGE_PORT: 3306
-      COMPUTE_NODES: worker01 worker02 worker03 worker04
-      PARTITION_NAME: docker
+      COMPUTE_NODES: aegypti_worker
       CONTROL_MACHINE: controller.local.dev
     
+  
+
+  aegypti_worker:
+    image: ${worker_image}
     deploy:
       resources:
         limits:
-          cpus: '8'
-          memory: 32G
-        reservations:
-          cpus: '4'
-          memory: 16G
-
-  worker01:
-    image: ${worker_image}
+          cpus: '40'
+          memory: 200000M
     depends_on:
       - controller
-    container_name: worker01
+    container_name: aegypti_worker
     privileged: true
     volumes:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "/home:/home"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/local:/local"
@@ -64,151 +65,30 @@ services:
       - "/reservoir_host_keys:/etc/ssh/host_keys"
       - "./secret:/.secret"
     restart: always
-    hostname:  worker01.local.dev
-    networks:
-      - slurm
-    ports:
-      - "22026:22"
-    environment:
-      USER: ansible
-      USERID: 1111
-      ROOT: 'true'
-      PASSWORD: ${RESERVOIR_USER_PASSWORD}
-      CONTROL_MACHINE: controller.local.dev
-      ACCOUNTING_STORAGE_HOST: controller
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 16G
-        reservations:
-          cpus: '2'
-          memory: 8G
-         
-
-  worker02:
-    image: ${worker_image}
-    depends_on:
-      - controller
-    container_name: worker02
-    privileged: true
-    volumes:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-      - "/home:/home"
-      - "/var/run/docker.sock:/var/run/docker.sock"
-      - "/local:/local"
-      - "/shared:/shared"
-      - "/home/crontabs/${HOSTNAME}/:/var/spool/cron/crontabs"
-      - "/archive:/archive"
-      - "/work:/work"
-      - "/reservoir_host_keys:/etc/ssh/host_keys"
-      - "./secret:/.secret"
-    restart: always
-    hostname: worker02.local.dev
+    hostname: aegypti_worker.local.dev
     networks:
       - slurm
     ports:
       - "22023:22"
     environment:
-      USER: ansible
-      USERID: 1111
-      ROOT: 'true'
-      PASSWORD: ${RESERVOIR_USER_PASSWORD}
-      CONTROL_MACHINE: controller.local.dev
-      ACCOUNTING_STORAGE_HOST: controller
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 16G
-        reservations:
-          cpus: '2'
-          memory: 8G
-          
+        USER: ansible
+        USERID: 111
+        ROOT: 'true'
+        PASSWORD: ${RESERVOIR_USER_PASSWORD}
+        PARTITION_NAME: non-gpu
+        CONTROL_MACHINE: controller.local.dev
+        ACCOUNTING_STORAGE_HOST: controller
+   
+        
+
+  
 
 
-  worker03:
-    image: ${worker_image}
-    depends_on:
-      - controller
-    container_name: worker03
-    privileged: true
-    volumes:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-      - "/home:/home"
-      - "/var/run/docker.sock:/var/run/docker.sock"
-      - "/local:/local"
-      - "/shared:/shared"
-      - "/home/crontabs/${HOSTNAME}/:/var/spool/cron/crontabs"
-      - "/archive:/archive"
-      - "/work:/work"
-      - "/reservoir_host_keys:/etc/ssh/host_keys"
-      - "./secret:/.secret"
-    restart: always
-    hostname: worker03.local.dev
-    networks:
-      - slurm
-    ports:
-      - "22024:22" 
-    environment:
-      USER: ansible
-      USERID: 1111
-      ROOT: 'true'
-      PASSWORD: ${RESERVOIR_USER_PASSWORD}
-      CONTROL_MACHINE: controller.local.dev
-      ACCOUNTING_STORAGE_HOST: controller
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 16G
-        reservations:
-          cpus: '2'
-          memory: 8G
-                             
-
-
-  worker04:
-    image: ${worker_image}
-    depends_on:
-      - controller
-    container_name: worker04
-    privileged: true
-    volumes:
-      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
-      - "/home:/home"
-      - "/var/run/docker.sock:/var/run/docker.sock"
-      - "/local:/local"
-      - "/shared:/shared"
-      - "/home/crontabs/${HOSTNAME}/:/var/spool/cron/crontabs"
-      - "/archive:/archive"
-      - "/work:/work"
-      - "/reservoir_host_keys:/etc/ssh/host_keys"
-      - "./secret:/.secret"
-    restart: always
-    hostname: worker04.local.dev
-    networks:
-      - slurm
-    ports:
-      - "22025:22" 
-    environment:
-      USER: ansible
-      USERID: 1111
-      ROOT: 'true'
-      PASSWORD: ${RESERVOIR_USER_PASSWORD}
-      CONTROL_MACHINE: controller.local.dev
-      ACCOUNTING_STORAGE_HOST: controller
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 16G
-        reservations:
-          cpus: '2'
-          memory: 8G
-          
 
 networks:
   slurm:
     name: slurm_network
+
+
+
 

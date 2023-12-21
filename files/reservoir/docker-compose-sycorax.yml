@@ -5,10 +5,15 @@ services:
     image: ${worker_image}
     deploy:
       resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+              count: 1
         limits:
           cpus: '128'
           memory: 250000M
-    container_name: prospero_worker
+    container_name: sycorax_worker
     privileged: true
     volumes:
       - "/home:/home"
@@ -19,31 +24,22 @@ services:
       - "/archive:/archive"
       - "/work:/work"
       - "/reservoir_host_keys:/etc/ssh/host_keys"
-      - "./secret:/.secret"
+      - "./secret:/..secret"
     restart: always
-    hostname: prospero.ecohealthalliance.org
+    hostname: sycorax.ecohealthalliance.org
     networks:
       - slurm
     ports:
       - "22023:22"
     environment:
-        USER: ansible
-        USERID: 111
-        ROOT: 'true'
-        PASSWORD: ${RESERVOIR_USER_PASSWORD}
-        PARTITION_NAME: non-gpu
-        CONTROL_MACHINE: controller.local.dev
-        ACCOUNTING_STORAGE_HOST: controller
+      USER: ansible
+      USERID: 111
+      ROOT: 'true'
+      PASSWORD: ${RESERVOIR_USER_PASSWORD}
+      PARTITION_NAME: non-gpu
+      CONTROL_MACHINE: controller.local.dev
+      ACCOUNTING_STORAGE_HOST: controller
        
-   
-    
-  
-
-
 networks:
   slurm:
     name: slurm_network
-
-
-
-
