@@ -1,14 +1,17 @@
 ---
 - name: Setup Docker Swarm Cluster and Overlay Network
-  hosts: all
+  hosts: base_machines
   become: yes
-  gather_facts: no
+  vars_files:
+    - secure.yml
+    - containers.yml
+  gather_facts: yes
 
   tasks:
-    # Initialize Docker Swarm on Sycorax
+    # Initialize Docker Swarm on aegypti (Manager Node)
     - name: Initialize Docker Swarm (on manager node)
       command: docker swarm init
-      when: inventory_hostname in groups['swarm_manager']
+      when: inventory_hostname == 'aegypti'
       register: swarm_init
       ignore_errors: yes
 
@@ -16,16 +19,23 @@
     - name: Get Docker Swarm join-token for worker
       command: docker swarm join-token -q worker
       register: join_token
-      when: inventory_hostname in groups['swarm_manager'] and swarm_init is succeeded
+      when: inventory_hostname == 'aegypti' 
+      changed_when: false
+
+    # Debug: Print Join Token
+    - name: Debug join_token
+      debug:
+        var: join_token
+      when: inventory_hostname == 'aegypti' 
 
     # Join Worker Nodes to Swarm
     - name: Join Docker Swarm (on worker nodes)
-      command: "docker swarm join --token {{ hostvars[groups['swarm_manager'][0]]['join_token'].stdout }} {{ hostvars[groups['swarm_manager'][0]]['ansible_default_ipv4']['address'] }}:2377"
-      when: inventory_hostname in groups['swarm_workers']
+      command: "docker swarm join --token {{ hostvars['aegypti']['join_token'].stdout }} {{ hostvars['aegypti']['ansible_default_ipv4']['address'] }}:2377"
+      when: inventory_hostname in ['sycorax', 'prospero'] and 'join_token' in hostvars['aegypti']
       ignore_errors: yes
 
     # Create Overlay Network
     - name: Create Docker Overlay Network
-      command: docker network create --driver overlay --attachable slurm_network
-      when: inventory_hostname in groups['swarm_manager']
+      command: docker network create --driver overlay --attachable test
+      when: inventory_hostname == 'aegypti'
       run_once: true

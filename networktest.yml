@@ -1,0 +1,22 @@
+---
+- name: Deploy Docker Compose with Ansible
+  hosts: swarm_manager
+  become_method: sudo
+  vars_files:
+    -  secure.yml
+    -  containers.yml
+  tasks:
+    - name: Copy compose directory
+      copy: src="files/docker-compose.yml" dest="/home/espira" force=yes
+    - name: Ensure jsondiff is installed
+      pip:
+        name: jsondiff
+        state: present
+
+    - name: Deploy Docker Stack
+      community.general.docker_stack:
+        state: present
+        name: test_stack
+        compose:
+          - /home/espira/docker-compose.yml
+      delegate_to: "{{ groups['swarm_manager'][0] }}"
