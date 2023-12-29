@@ -1,4 +1,4 @@
-version: '3.1'
+version: '3.8'
 
 services:
   controller:
@@ -8,6 +8,9 @@ services:
         limits:
           cpus: '20'
           memory: 200000M
+      placement:
+        constraints:
+          - node.labels.node_type == aegypti
     container_name: controller
     privileged: true
     volumes:
@@ -19,14 +22,14 @@ services:
       - "/archive:/archive"
       - "/work:/work"
       - "/reservoir_host_keys:/etc/ssh/host_keys"
-      -  "./secret:/.secret"
+      - "./secret:/.secret"
     restart: always
     hostname: ${HOSTNAME}
     networks:
       - slurm
     ports:
-      - "22022:22"
-      - "8787:8787"
+      - "22024:22"
+      - "8786:8787"
     environment:
       USER: ansible
       USERID: 111
@@ -40,8 +43,6 @@ services:
       ACCOUNTING_STORAGE_PORT: 3306
       COMPUTE_NODES: aegypti_worker
       CONTROL_MACHINE: controller.local.dev
-    
-  
 
   aegypti_worker:
     image: ${worker_image}
@@ -50,6 +51,9 @@ services:
         limits:
           cpus: '40'
           memory: 200000M
+      placement:
+        constraints:
+          - node.labels.node_type == aegypti
     depends_on:
       - controller
     container_name: aegypti_worker
@@ -71,24 +75,48 @@ services:
     ports:
       - "22023:22"
     environment:
-        USER: ansible
-        USERID: 111
-        ROOT: 'true'
-        PASSWORD: ${RESERVOIR_USER_PASSWORD}
-        PARTITION_NAME: non-gpu
-        CONTROL_MACHINE: controller.local.dev
-        ACCOUNTING_STORAGE_HOST: controller
-   
-        
+      USER: ansible
+      USERID: 111
+      ROOT: 'true'
+      PASSWORD: ${RESERVOIR_USER_PASSWORD}
+      PARTITION_NAME: non-gpu
+      CONTROL_MACHINE: controller.local.dev
+      ACCOUNTING_STORAGE_HOST: controller
 
-  
-
-
+  sycorax_worker:
+    image: ${worker_image}
+    deploy:
+      resources:
+        limits:
+          cpus: '128'
+          memory: 250000M
+      placement:
+        constraints:
+            - node.labels.node_type == sycorax
+    volumes:
+      - "/home:/home"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/local:/local"
+      - "/shared:/shared"
+      - "/home/crontabs/${HOSTNAME}/:/var/spool/cron/crontabs"
+      - "/archive:/archive"
+      - "/work:/work"
+      - "/reservoir_host_keys:/etc/ssh/host_keys"
+      - "./secret:/.secret"
+    networks:
+      - slurm
+    ports:
+      - "22025:22"
+    environment:
+      USER: ansible
+      USERID: 111
+      ROOT: 'true'
+      PASSWORD: ${RESERVOIR_USER_PASSWORD}
+      PARTITION_NAME: gpu
+      CONTROL_MACHINE: controller.local.dev
+      ACCOUNTING_STORAGE_HOST: controller
 
 networks:
   slurm:
-    name: slurm_network
-
-
-
-
+    external: true
+    driver: overlay
