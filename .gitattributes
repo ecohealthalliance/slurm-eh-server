@@ -11,3 +11,4 @@ reservoir_host_keys/ssh_host_ed25519_key filter=git-crypt diff=git-crypt
 reservoir_host_keys/ssh_host_ed25519_key.pub filter=git-crypt diff=git-crypt
 reservoir_host_keys/ssh_host_rsa_key filter=git-crypt diff=git-crypt
 reservoir_host_keys/ssh_host_rsa_key.pub filter=git-crypt diff=git-crypt
+aws_keys.yml filter=git-crypt diff=git-crypt

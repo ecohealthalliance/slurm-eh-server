@@ -5,7 +5,7 @@
     backup_keys:
       - backup.key
       - backup.secret.key
-    aws_keys_file: host_vars/prospero/aws_keys.yml
+    aws_keys_file: aws_keys.yml
   tasks:
     - name: Debug AWS keys
       debug:
@@ -69,4 +69,5 @@
 
   vars_files:
     - secure.yml
+    - aws_keys.yml
     - "{{ aws_keys_file }}"
