@@ -83,6 +83,7 @@
       with_items: "{{user_accounts}}"
       when: item.cron is defined and item.cron and (item.state is undefined or item.state != "absent")
 
+
    # - name: set group fileshare for linuxbrew home dir and allow group write
     #  file:
      #   path: /home/linuxbrew

@@ -1,0 +1,23 @@
+---
+- name: Automate Tasks Inside a Docker Swarm Service Container
+  hosts: sycorax
+  become: yes
+  tasks:
+    - name: Get Docker Container ID for the sycorax_worker service
+      shell: "docker ps -q --filter 'label=com.docker.swarm.service.name=sycorax_stack_sycorax_worker'"
+      register: docker_ps_output
+      ignore_errors: yes
+
+    - name: Check if Container ID is Captured
+      fail:
+        msg: "No container found for the specified service label."
+      when: docker_ps_output.stdout == ""
+
+    - name: Update and Install Ansible in the Container
+      shell: |
+        docker exec -it {{ docker_ps_output.stdout }} /bin/bash -c 'apt-get update && apt-get install -y ansible'
+      ignore_errors: yes
+
+    - name: Run Ansible Playbook Inside the Container
+      shell: |
+        docker exec -it {{ docker_ps_output.stdout }} /bin/bash -c 'cd /home/espirado/slurm-eh-server/ && ansible-playbook update-accounts.yml'
