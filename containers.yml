@@ -2,6 +2,9 @@
 slurm_containers:
   - controller
   - aegypti_worker
-  - prospero_worker
+  #- prospero_worker
   - sycorax_worker
 
+# secure.yml
+controller_image: "ghcr.io/ecohealthalliance/slurm_reservoir:controller-gpu"
+worker_image: "ghcr.io/ecohealthalliance/slurm_reservoir:worker-gpu"
