@@ -1,9 +1,9 @@
 ---
-ansible_host: prospero.ecohealthalliance.org
+ansible_host: sycorax.ecohealthalliance.org
 ansible_port: 22020
 ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 machine_runtime: nvidia
-reservoir_image: "ghcr.io/ecohealthalliance/reservoir:gpu"
-reservoir_hostname: sycorax-worker
+#reservoir_image: "ghcr.io/ecohealthalliance/reservoir:gpu"
+reservoir_hostname: controller
 controller_image: "ghcr.io/ecohealthalliance/slurm_reservoir:controller-gpu"
 worker_image: "ghcr.io/ecohealthalliance/slurm_reservoir:worker-gpu"

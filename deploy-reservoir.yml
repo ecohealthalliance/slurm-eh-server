@@ -89,8 +89,6 @@
 - hosts: docker_containers
   become: yes
   become_method: sudo
-  roles:
-    - update-accounts
   tasks:
     - name: Create gurobi dir
       file: path=/opt/gurobi810 state=directory

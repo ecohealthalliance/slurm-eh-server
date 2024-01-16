@@ -1,9 +1,9 @@
 # vars.yml
 slurm_containers:
   - controller
-  - aegypti_worker
+  #- aegypti_worker
   #- prospero_worker
-  - sycorax_worker
+  #- sycorax_worker
 
 # secure.yml
 controller_image: "ghcr.io/ecohealthalliance/slurm_reservoir:controller-gpu"
