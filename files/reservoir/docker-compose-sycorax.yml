@@ -9,7 +9,7 @@ services:
       resources:
         limits:
           cpus: '128'
-          memory: 250000M
+          memory: 500000M
       placement:
         constraints:
           - node.labels.node_type == sycorax
@@ -18,7 +18,7 @@ services:
       - "/home:/home"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/local:/local"
-      - "/shared:/shared"
+      - "/home/shared:/shared"
       - "/archive:/archive"
       - "/work:/work"
       - "/reservoir_host_keys:/etc/ssh/host_keys"
@@ -53,7 +53,7 @@ services:
       resources:
         limits:
           cpus: '128'
-          memory: 250000M
+          memory: 500000M
       placement:
         constraints:
           - node.labels.node_type == sycorax
@@ -62,7 +62,7 @@ services:
       - "/home:/home"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/local:/local"
-      - "/shared:/shared"
+      - "/home/shared:/shared"
       - "/archive:/archive"
       - "/work:/work"
       - "/reservoir_host_keys:/etc/ssh/host_keys"
@@ -99,7 +99,7 @@ services:
       - "/home:/home"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/local:/local"
-      - "/shared:/shared"
+      - "/home/shared:/shared"
       - "/archive:/archive"
       - "/work:/work"
       - "/reservoir_host_keys:/etc/ssh/host_keys"
@@ -127,7 +127,7 @@ services:
       resources:
         limits:
           cpus: '72'
-          memory: 51500M
+          memory: 500000M
       placement:
         constraints:
           - node.labels.node_type == prospero
@@ -136,7 +136,7 @@ services:
       - "/home:/home"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/local:/local"
-      - "/shared:/shared"
+      - "/home/shared:/shared"
       - "/archive:/archive"
       - "/work:/work"
       - "/reservoir_host_keys:/etc/ssh/host_keys"

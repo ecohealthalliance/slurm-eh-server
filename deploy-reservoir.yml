@@ -81,14 +81,15 @@
     # Mounting the full ssh directory makes it so some things can't be updated in the base image, so
     # instead a new directory is created and the configuration is updated to point to that.
    # New tasks for SSH host keys and SSHD configuration
-      
-
-
-
-
+ 
 - hosts: docker_containers
   become: yes
+  vars_files:
+    - secure.yml
+    - containers.yml
   become_method: sudo
+  roles:
+    - update-accounts
   tasks:
     - name: Create gurobi dir
       file: path=/opt/gurobi810 state=directory
