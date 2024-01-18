@@ -83,6 +83,7 @@ Port Number | Port Usage
 ----------- | ----------
 22020 | prospero & aegypti base ssh
 22022 | prospero & aegypti container ssh
+22023 | sycorax container ssh
 22053 | kirby repel-infrastructure postgres container (dev workflow)
 22090 | repel-infrastructure shiny container (local workflow)
 22097 | repel-infrastrure scraper container (local workflow)

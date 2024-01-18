@@ -1,10 +1,10 @@
 ---
 - name: Automate Tasks Inside a Docker Swarm Service Container
-  hosts: sycorax
+  hosts: prospero
   become: yes
   tasks:
     - name: Get Docker Container ID for the sycorax_worker service
-      shell: "docker ps -q --filter 'label=com.docker.swarm.service.name=sycorax_stack_sycorax_worker'"
+      shell: "docker ps -q --filter 'label=com.docker.swarm.service.name=sycorax_stack_prospero_worker'"
       register: docker_ps_output
       ignore_errors: yes
 
