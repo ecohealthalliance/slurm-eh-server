@@ -48,11 +48,11 @@
       copy:
         src: CloudWatch/config_with_log.json
         dest: /opt/aws/amazon-cloudwatch-agent/bin/config.json
-      when: ansible_hostname == "prospero"
+      when: ansible_hostname == "sycorax"
     - name: copy over config file without log filtering for other servers
       copy:
         src: CloudWatch/config.json
         dest: /opt/aws/amazon-cloudwatch-agent/bin/config.json
-      when: ansible_hostname != "prospero"
+      when: ansible_hostname != "sycorax"
     - name: start the CloudWatch Agent
       command: "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m onPremise -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json"

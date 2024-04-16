@@ -9,6 +9,7 @@ AWS_ACCESS_KEY_ID="{{ aws_keys.access_key }}"
 AWS_SECRET_ACCESS_KEY="{{ aws_keys.secret_key }}"
 VOL_SIZE="1000"  # default volume size set to 1000MB
 
+
 LOG_GROUP_NAME="BackupFailureLogGroup"
 
 # Check if AWS keys are set
@@ -27,7 +28,7 @@ touch /root/.backup_in_progress
 IFS=$'\n'
 
 for i in $(find /home/ -maxdepth 1 -type d -regextype sed -regex '.*/[a-zA-Z0-9\_]\+$' ! -name 'git'); do
-  dest="s3://s3.amazonaws.com/prospero-bckp/backupof$(basename $i)"
+  dest="s3://s3.amazonaws.com/sycorax-backup/$(basename $i)"
 
    # Log size of the directory before backup
     DIR_SIZE=$(du -sh "$i" | cut -f1)
